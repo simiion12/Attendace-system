@@ -54,7 +54,7 @@ We welcome contributions from all team members. Please follow these guidelines:
 
 ## License
 
-This project is licensed under the MIT License. You are free to use, modify, and distribute this software per the terms of the license.
+This project is licensed under the [MIT License](LICENSE). You are free to use, modify, and distribute this software per the terms of the license.
 
 ## Acknowledgments
 
