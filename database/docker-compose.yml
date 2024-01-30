@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  mongo:
+      image: mongo
+      container_name: mongodb
+      restart: always
+      environment:
+        - MONGO_INITDB_ROOT_USERNAME=mongo
+        - MONGO_INITDB_ROOT_PASSWORD=password
+        - MONGO_INITDB_DATABASE=Attendance
+      volumes:
+        - ./data/mongodb_data:/data/db
+      ports:
+        - "27017:27017"
+  postgres:
+    image: postgres:latest
+    container_name: Attendance-Postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./data/postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
