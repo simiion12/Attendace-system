@@ -1,14 +1,8 @@
-from flask import Flask
-from mongoengine import connect
+from back import app
+from back.routes import main_routes
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres@localhost:5432/postgres'
-app.config['MONGO_URI'] = 'mongodb://localhost:27017/flask_db'
-connect(
-    db='Attendance',
-    host='mongodb://localhost:27017/flask_db',
-)
-
+# Register the main_routes Blueprint
+app.register_blueprint(main_routes)
 
 if __name__ == '__main__':
     app.run(debug=True)
