@@ -1,4 +1,4 @@
-from back.models import db
+from back.models import db_postgres as db
 
 
 class Admin(db.Model):
