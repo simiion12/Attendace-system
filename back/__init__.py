@@ -10,9 +10,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres@localhos
 app.config['MONGO_DBNAME'] = 'Attendance'
 app.config['MONGO_URI'] = 'mongodb://localhost:27017/Attendance'
 
-#connect(db='flask_db', host='mongodb://localhost:27017/flask_db')
+connect(db='Attendance', host='mongodb://localhost:27017/Attendance')
 #client = pymongo.MongoClient("mongodb://localhost:27017/flask_db")
 # Initialize the SQLAlchemy, Mongo database
 db_postgres.init_app(app)
 mongo = PyMongo(app)
-grid_fs = GridFS(mongo.db)
+
+grid_fs_admins = GridFS(mongo.db, collection='admins_photos')
+grid_fs_users = GridFS(mongo.db, collection='users_photos')

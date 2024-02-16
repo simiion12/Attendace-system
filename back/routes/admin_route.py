@@ -1,21 +1,12 @@
-from flask import Blueprint, jsonify, request
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField
-from wtforms.validators import DataRequired, Email, EqualTo
+from flask import Blueprint, jsonify, request, Response
 from functools import wraps
 import jwt
 from back.models.admins import Admins
-from back.models.admins_photos import AdminsPhoto
 from back.models.departments import Departments
-from back import app, grid_fs
+from back import app, mongo, grid_fs_admins
 from back.models import db_postgres as db
-from back import mongo
 import gridfs
 import bcrypt
-import uuid
-import os
-from werkzeug.utils import secure_filename
-
 
 # Create a Blueprint for the routes in this directory
 admin_routes = Blueprint("admin_routes", __name__)
@@ -41,16 +32,6 @@ def token_required(f):
     return decorated
 
 
-class RegistrationForm(FlaskForm):
-    secret_password = PasswordField('Secret Password', validators=[DataRequired()])
-    admin_username = StringField('Username', validators=[DataRequired()])
-    admin_password = PasswordField('Password', validators=[DataRequired(), EqualTo('confirm', message='Passwords must match')])
-    confirm = PasswordField('Repeat Password')
-    admin_fullname = StringField('Fullname', validators=[DataRequired()])
-    admin_email = StringField('Email', validators=[DataRequired(), Email()])
-    department_id = StringField('Department ID', validators=[DataRequired()])
-
-
 @admin_routes.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'GET':
@@ -67,21 +48,17 @@ def register():
         admin_email = request.form.get('admin_email')
         department_id = request.form.get('department_id')
 
-        #form = RegistrationForm()
-        #if not form.validate():
-          #  return jsonify({'message': 'Invalid form', 'errors': form.errors}), 400
-
         if secret_password != 'secret':
             return jsonify({'message': 'Secret password is incorrect'}), 400
 
         if admin_password != confirm:
             return jsonify({'message': 'Password and confirmation do not match'}), 400
 
-        #existing_admin = Admins.query.filter_by(admin_username=admin_username).first()
+        existing_admin = Admins.query.filter_by(username=admin_username).first()
 
         existing_department = Departments.query.filter_by(department_id=department_id).first()
-        #if existing_admin:
-        #    return jsonify({'message': 'Admin already exists'}), 400
+        if existing_admin:
+            return jsonify({'message': 'Admin already exists'}), 400
         if not existing_department:
             return jsonify({'message': 'Department does not exist'}), 400
 
@@ -89,16 +66,15 @@ def register():
         pwhash = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
         pwhash = pwhash.decode('utf-8')
 
-        #admin_id = uuid.uuid4()
+        #admin_id = Admins.query.order_by(Admins.admin_id.desc()).first().admin_id + 1
         admin_id = 1
         new_admin = Admins(admin_id=admin_id, username=admin_username,
                           password=pwhash, full_name=admin_fullname,
                           email=admin_email, department_id=department_id)
 
-        # Adding photo in MongoDB
+        # Adding photo in MongoDB using AdminsPhoto model
         file = request.files['file']
-        fs = gridfs.GridFS(mongo.db, collection='admins_photos')
-        file_id = fs.put(file, filename=file.filename, admin_id=admin_id)
+        file_id = grid_fs_admins.put(file, filename=file.filename, admin_id=admin_id)
 
         db.session.add(new_admin)
         db.session.commit()
@@ -106,6 +82,40 @@ def register():
         return jsonify({'message': 'User registered successfully with selfie photo', 'file_id': str(file_id)}), 201
 
     return jsonify({'message': 'This is the registration page'}), 200
+
+
+@admin_routes.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        valid_username, correct_password, face_recognized = False, False, False
+        admin_username = request.form.get('admin_username')
+        admin_password = request.form.get('admin_password')
+
+        existing_admin = Admins.query.filter_by(username=admin_username).first()
+        if existing_admin:
+            valid_username = True
+        else:
+            return jsonify({'message': 'Admin does not exist'}), 400
+
+        if bcrypt.checkpw(admin_password.encode('utf-8'), existing_admin.password.encode('utf-8')):
+            correct_password = True
+        else:
+            return jsonify({'message': 'Password is incorrect'}), 400
+
+        # Face recognition part
+        photo_data_mongo = Admins.face_retrieving(admin_username)
+        photo_data_new = request.files['file']
+        if photo_data_mongo and photo_data_new:
+            face_recognized = Admins.face_recognition(photo_data_mongo, photo_data_new)
+
+        if valid_username and correct_password and face_recognized:
+            token = jwt.encode({'user_ID': existing_admin.admin_id}, app.config['SECRET_KEY'])
+            return jsonify({'token': token})
+
+        else:
+            return jsonify({'message': 'Face not recognized'}), 400
+
+    return jsonify({'message': 'This is the login page'}), 200
 
 
 @admin_routes.route('/post', methods=['POST'])
@@ -122,26 +132,13 @@ def postinmongo():
     return jsonify({'message': 'User registered successfully with selfie photo', 'file_id': str(file_id)}), 201
 
 
-@app.route('/photos/<admin_id>', methods=['GET'])
-def get_photos(admin_id):
-    # Query the admins_photos collection to get the file_id associated with the admin_id
-    admin_photo = mongo.db.admins_photos.files.find_one({'admin_id': admin_id})
-    if admin_photo:
-        file_id = admin_photo['_id']
-        # Retrieve the file content using the file_id from GridFS
-        file_data = grid_fs.get(file_id)
-        # Return the file content
-        return jsonify({'admin_id': admin_id, 'file_data': file_data.read().decode('utf-8')}), 200
-    else:
-        return jsonify({'message': 'No photo found for admin_id {}'.format(admin_id)}), 404
-
-from flask import Response
-
 @app.route('/photo/<admin_id>', methods=['GET'])
 def get_photo(admin_id):
+    admin_id = int(admin_id)
+
     # Find the document in admins_photos.files collection
     photo_doc = mongo.db.admins_photos.files.find_one({'admin_id': admin_id})
-
+    print("Retrieved document:", photo_doc)
     if photo_doc:
         # Get the file_id from the photo document
         file_id = photo_doc['_id']
@@ -162,37 +159,30 @@ def get_photo(admin_id):
             return jsonify({'message': 'Photo data not found'}), 404
     else:
         return jsonify({'message': 'Photo not found'}), 404
-
-
-
 @app.route('/all', methods=['GET'])
 def get_all():
     # dropping all
-    admins_photos_chunks = mongo.db.admins_photos.chunks
-    admins_photos_files = mongo.db.admins_photos.files
+    admins_photos_chunks = mongo.db.fs.chunks
+    admins_photos_files = mongo.db.fs.files
     admins_photos_chunks.drop()
     admins_photos_files.drop()
 
     return jsonify({'message': 'All dropped'}), 200
 
 
-@admin_routes.route('/registerphoto', methods=['POST'])
-def register_with_photo():
-    # Check if the request contains a file
-    if 'file' not in request.files:
-        return jsonify({'message': 'No file part in the request'}), 400
+@app.route('/all1', methods=['GET'])
+def get_all1():
+    # dropping all from postgres
+    Admins.query.delete()
+    db.session.commit()
+    return jsonify({'message': 'All dropped from postgres'}), 200
 
-    admin_id = request.form['admin_id']
-    file = request.files['file']
-
-    # Save the file directly to MongoDB using PyMongo
-    file_id = mongo.save_file(file.filename, file)
-
-    # Now you can proceed with user registration along with the file_id stored in MongoDB
-
-    # Example: Saving the user details along with the file_id in the database
-    new_admin_photo = AdminsPhoto(admin_id=admin_id, admin_photo=file_id)
-    new_admin_photo.save()
-
-    return jsonify({'message': 'User registered successfully with selfie photo'}), 201
-
+@app.route('/face', methods=['GET'])
+def face():
+    face_recognized = False
+    photo_data_mongo = Admins.face_retrieving('panf')
+    # file = request.files['file']
+    photo_data_new = request.files['file']
+    if photo_data_mongo and photo_data_new:
+        face_recognized = Admins.face_recognition(photo_data_mongo, photo_data_new)
+    return jsonify({'face_recognized': face_recognized}), 200
