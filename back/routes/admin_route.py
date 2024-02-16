@@ -7,6 +7,7 @@ from back import app, mongo, grid_fs_admins
 from back.models import db_postgres as db
 import gridfs
 import bcrypt
+from back.models.users import Users
 
 # Create a Blueprint for the routes in this directory
 admin_routes = Blueprint("admin_routes", __name__)
@@ -23,7 +24,7 @@ def token_required(f):
 
         try:
             data = jwt.decode(token, app.config['SECRET_KEY'])
-            current_admin = Admins.query.filter_by(user_ID=data['user_ID']).first()
+            current_admin = Admins.query.filter_by(admin_id=data['admin_id']).first()
         except:
             return jsonify({'message': 'Token is invalid!'}), 401
 
@@ -32,7 +33,7 @@ def token_required(f):
     return decorated
 
 
-@admin_routes.route('/register', methods=['GET', 'POST'])
+@admin_routes.route('/admin_register', methods=['GET', 'POST'])
 def register():
     if request.method == 'GET':
         secret_password = request.form.get('secret_password')
@@ -66,13 +67,13 @@ def register():
         pwhash = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt())
         pwhash = pwhash.decode('utf-8')
 
-        #admin_id = Admins.query.order_by(Admins.admin_id.desc()).first().admin_id + 1
-        admin_id = 1
+        admin_id = Admins.query.order_by(Admins.admin_id.desc()).first().admin_id + 1
+        #admin_id = 1
         new_admin = Admins(admin_id=admin_id, username=admin_username,
                           password=pwhash, full_name=admin_fullname,
                           email=admin_email, department_id=department_id)
 
-        # Adding photo in MongoDB using AdminsPhoto model
+        # Adding photo in MongoDB
         file = request.files['file']
         file_id = grid_fs_admins.put(file, filename=file.filename, admin_id=admin_id)
 
@@ -84,7 +85,7 @@ def register():
     return jsonify({'message': 'This is the registration page'}), 200
 
 
-@admin_routes.route('/login', methods=['GET', 'POST'])
+@admin_routes.route('/admin_login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
         valid_username, correct_password, face_recognized = False, False, False
@@ -162,8 +163,8 @@ def get_photo(admin_id):
 @app.route('/all', methods=['GET'])
 def get_all():
     # dropping all
-    admins_photos_chunks = mongo.db.fs.chunks
-    admins_photos_files = mongo.db.fs.files
+    admins_photos_chunks = mongo.db.users_photos.chunks
+    admins_photos_files = mongo.db.users_photos.files
     admins_photos_chunks.drop()
     admins_photos_files.drop()
 
@@ -173,7 +174,7 @@ def get_all():
 @app.route('/all1', methods=['GET'])
 def get_all1():
     # dropping all from postgres
-    Admins.query.delete()
+    Users.query.delete()
     db.session.commit()
     return jsonify({'message': 'All dropped from postgres'}), 200
 

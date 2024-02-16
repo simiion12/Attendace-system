@@ -1,7 +1,9 @@
 from back.models import db_postgres as db
 from back import mongo, grid_fs_admins
-from flask import Response, jsonify
+from flask import jsonify
 import face_recognition
+
+
 class Admins(db.Model):
     admin_id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), nullable=False)
