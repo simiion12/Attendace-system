@@ -58,8 +58,8 @@ def register():
         pwhash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         pwhash = pwhash.decode('utf-8')
 
-        #user_id = User.query.order_by(User.admin_id.desc()).first().admin_id + 1
-        user_id = 1
+        user_id = Users.query.order_by(Users.admin_id.desc()).first().admin_id + 1
+        #user_id = 1
         new_user = Users(user_id=user_id, username=username,password=pwhash,
                         full_name=full_name, email=email, department_id=department_id)
 
