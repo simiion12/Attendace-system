@@ -110,9 +110,8 @@ def login():
             face_recognized = Admins.face_recognition(photo_data_mongo, photo_data_new)
 
         if valid_username and correct_password and face_recognized:
-            token = jwt.encode({'user_ID': existing_admin.admin_id}, app.config['SECRET_KEY'])
-            return jsonify({'token': token})
-
+            token = jwt.encode({'user_id': existing_admin.admin_id}, app.config['SECRET_KEY'])
+            return jsonify({'token': token}), 200
         else:
             return jsonify({'message': 'Face not recognized'}), 400
 
