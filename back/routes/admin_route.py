@@ -8,6 +8,8 @@ from back.models import db_postgres as db
 import gridfs
 import bcrypt
 from back.models.users import Users
+from back.models.adminattendance import admin_attendance
+from datetime import date
 
 # Create a Blueprint for the routes in this directory
 admin_routes = Blueprint("admin_routes", __name__)
@@ -110,6 +112,8 @@ def login():
             face_recognized = Admins.face_recognition(photo_data_mongo, photo_data_new)
 
         if valid_username and correct_password and face_recognized:
+            attendance_date = date.today()
+            admin_attendance.insert_admin_attendance(existing_admin.admin_id, attendance_date)
             token = jwt.encode({'user_id': existing_admin.admin_id}, app.config['SECRET_KEY'])
             return jsonify({'token': token}), 200
         else:

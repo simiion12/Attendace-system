@@ -7,6 +7,8 @@ from back import app, mongo, grid_fs_users
 from back.models import db_postgres as db
 import gridfs
 import bcrypt
+from datetime import date
+from back.models.user_attendance import user_attendance
 
 
 # Create a Blueprint for the routes in this directory
@@ -99,6 +101,8 @@ def login():
             face_recognized = Users.face_recognition(photo_data_mongo, photo_data_new)
 
         if valid_username and correct_password and face_recognized:
+            attendance_date = date.today()
+            user_attendance.insert_user_attendance(existing_user.user_id, attendance_date)
             token = jwt.encode({'user_id': existing_user.user_id}, app.config['SECRET_KEY'])
             return jsonify({'token': token}), 200
         else:

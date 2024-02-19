@@ -1,7 +1,15 @@
-from back.models import db
+from back.models import db_postgres as db
 
 
-class UserAttendance(db.Model):
+class user_attendance(db.Model):
     user_attendance_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('back.models.user.user_id'), nullable=False)
     attendance_date = db.Column(db.Date, nullable=False)
+
+    @staticmethod
+    def insert_user_attendance(user_id, attendance_date):
+        #attendance_id = user_attendance.query.order_by(user_attendance.attendance_id.desc()).first().attendance_id + 1
+        attendance_id = user_attendance.query.count() + 1
+        new_user_attendance = user_attendance(attendance_id=attendance_id, user_id=user_id, attendance_date=attendance_date)
+        db.session.add(new_user_attendance)
+        db.session.commit()
