@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Welcome to the Face Recognition Attendance System project! This application aims to streamline attendance tracking using facial recognition technology. This project is developed as part of [Your University/Institution]'s [Course Name] course, emphasizing the integration of frontend, backend, and database technologies.
+Welcome to the Face Recognition Attendance System project! This application aims to streamline attendance tracking using facial recognition technology. This project is developed as part of Technical University's emphasizing the integration of frontend, backend, and database technologies.
 
 ## Problem Statement
 
