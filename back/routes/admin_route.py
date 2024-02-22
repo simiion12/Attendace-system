@@ -8,7 +8,7 @@ from back.models import db_postgres as db
 import gridfs
 import bcrypt
 from back.models.users import Users
-from back.models.adminattendance import admin_attendance
+from back.models.admin_attendance import admin_attendance
 from datetime import date
 
 # Create a Blueprint for the routes in this directory
@@ -121,8 +121,45 @@ def login():
 
     return jsonify({'message': 'This is the login page'}), 200
 
+@admin_routes.route('/get_all_user_attendance', methods=['GET'])
+def get_all_user_attendance():
+    pass
 
-@admin_routes.route('/post', methods=['POST'])
+@admin_routes.route('/get_all_admin_attendance', methods=['GET'])
+def get_all_admin_attendance():
+    pass
+
+@admin_routes.route('/get_all_users', methods=['GET'])
+def get_all_users():
+    pass
+
+@admin_routes.route('/get_all_admins', methods=['GET'])
+def get_all_admins():
+    pass
+
+@admin_routes.route('/get_all_departments', methods=['GET'])
+def get_all_departments():
+    pass
+
+@admin_routes.route('/get_userattendance_by_department', methods=['GET'])
+def get_userattendance_by_department():
+    pass
+
+@admin_routes.route('/get_adminattendance_by_department', methods=['GET'])
+def get_adminattendance_by_department():
+    pass
+
+
+
+
+
+
+
+
+
+
+
+"""@admin_routes.route('/post', methods=['POST'])
 def postinmongo():
     admin_id = request.form['admin_id']
     file = request.files['file']
@@ -163,6 +200,7 @@ def get_photo(admin_id):
             return jsonify({'message': 'Photo data not found'}), 404
     else:
         return jsonify({'message': 'Photo not found'}), 404
+    
 @app.route('/all', methods=['GET'])
 def get_all():
     # dropping all
@@ -189,4 +227,4 @@ def face():
     photo_data_new = request.files['file']
     if photo_data_mongo and photo_data_new:
         face_recognized = Admins.face_recognition(photo_data_mongo, photo_data_new)
-    return jsonify({'face_recognized': face_recognized}), 200
+    return jsonify({'face_recognized': face_recognized}), 200"""

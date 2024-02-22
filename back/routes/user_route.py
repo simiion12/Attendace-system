@@ -88,7 +88,6 @@ def login():
             valid_username = True
         else:
             return jsonify({'message': 'User does not exist'}), 400
-
         if bcrypt.checkpw(password.encode('utf-8'), existing_user.password.encode('utf-8')):
             correct_password = True
         else:
