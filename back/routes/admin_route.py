@@ -1,11 +1,10 @@
-from flask import Blueprint, jsonify, request, Response
+from flask import Blueprint, jsonify, request
 from functools import wraps
 import jwt
 from back.models.admins import Admins
 from back.models.departments import Departments
-from back import app, mongo, grid_fs_admins
+from back import app, grid_fs_admins
 from back.models import db_postgres as db
-import gridfs
 import bcrypt
 from back.models.users import Users
 from back.models.admin_attendance import admin_attendance
@@ -22,23 +21,24 @@ def token_required(f):
         print(request.headers)
         if 'Authorization' in request.headers:
             token = request.headers['Authorization'].split(" ")[1]
+            print(token)
         if not token:
             return jsonify({'message': 'Token is missing!'}), 401
 
-        try:
-            data = jwt.decode(token, app.config['SECRET_KEY'])
-            current_admin = Admins.query.filter_by(admin_id=data['admin_id']).first()
-        except:
+        data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        print(data)
+        current_admin = Admins.query.filter_by(admin_id=data['admin_id']).first()
+        if not current_admin:
             return jsonify({'message': 'Token is invalid!'}), 401
 
-        return f(current_admin, *args, **kwargs)
+        return f(*args, **kwargs)
 
     return decorated
 
 
-@admin_routes.route('/admin_register', methods=['GET', 'POST'])
+@admin_routes.route('/admin_register', methods=['POST'])
 def register():
-    if request.method == 'GET':
+    if request.method == 'POST':
         secret_password = request.form.get('secret_password')
         print(secret_password)
         if secret_password != 'secret':
@@ -88,9 +88,9 @@ def register():
     return jsonify({'message': 'This is the registration page'}), 200
 
 
-@admin_routes.route('/admin_login', methods=['GET', 'POST'])
+@admin_routes.route('/admin_login', methods=['POST'])
 def login():
-    if request.method == 'GET':
+    if request.method == 'POST':
         valid_username, correct_password, face_recognized = False, False, False
         admin_username = request.form.get('admin_username')
         admin_password = request.form.get('admin_password')
@@ -116,12 +116,25 @@ def login():
             attendance_date = date.today()
             expiration_time = datetime.utcnow() + timedelta(minutes=30)
             admin_attendance.insert_admin_attendance(existing_admin.admin_id, attendance_date)
-            token = jwt.encode({'user_id': existing_admin.admin_id, 'exp': expiration_time}, app.config['SECRET_KEY'])
+            token = jwt.encode({'admin_id': existing_admin.admin_id, 'exp': expiration_time}, app.config['SECRET_KEY'])
             return jsonify({'token': token}), 200
         else:
             return jsonify({'message': 'Face not recognized'}), 400
 
     return jsonify({'message': 'This is the login page'}), 200
+
+
+
+@admin_routes.route('/insert_department', methods=['POST'])
+@token_required
+def insert_department():
+    department_name = request.form['department_name']
+    department_id = Departments.query.count() + 1
+    new_department = Departments(department_id=department_id, department_name=department_name)
+    db.session.add(new_department)
+    db.session.commit()
+    return jsonify({'message': 'Department inserted successfully'}), 201
+
 
 @admin_routes.route('/get_all_user_attendance', methods=['GET'])
 @token_required
@@ -146,6 +159,7 @@ def get_all_admin_attendance():
                                     'attendance_date': attendance.attendance_date})
     return jsonify({'admin_attendance': admin_attendance_list}), 200
 
+
 @admin_routes.route('/get_all_users', methods=['GET'])
 @token_required
 def get_all_users():
@@ -156,6 +170,7 @@ def get_all_users():
                         'full_name': user.full_name, 'email': user.email,
                         'department_id': user.department_id})
     return jsonify({'users': user_list}), 200
+
 
 @admin_routes.route('/get_all_admins', methods=['GET'])
 @token_required
@@ -169,6 +184,7 @@ def get_all_admins():
 
     return jsonify({'admins': admin_list}), 200
 
+
 @admin_routes.route('/get_all_departments', methods=['GET'])
 @token_required
 def get_all_departments():
@@ -178,6 +194,7 @@ def get_all_departments():
         department_list.append({'department_id': department.department_id, 'department_name': department.department_name})
 
     return jsonify({'departments': department_list}), 200
+
 
 @admin_routes.route('/get_userattendance_by_department/<department_name>', methods=['GET'])
 @token_required
@@ -199,6 +216,7 @@ def get_user_attendance_by_department(department_name):
 
     return jsonify({'user_attendance_by_department': user_attendance_by_department}), 200
 
+
 @admin_routes.route('/get_adminattendance_by_department/<department_name>', methods=['GET'])
 @token_required
 def get_admin_attendance_by_department(department_name):
@@ -218,7 +236,6 @@ def get_admin_attendance_by_department(department_name):
                                                    'attendance_date': attendance.attendance_date})
 
     return jsonify({'admin_attendance_by_department': admin_attendance_by_department}), 200
-
 
 
 

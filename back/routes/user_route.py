@@ -1,11 +1,10 @@
-from flask import Blueprint, jsonify, request, Response
+from flask import Blueprint, jsonify, request
 from functools import wraps
 import jwt
 from back.models.users import Users
 from back.models.departments import Departments
-from back import app, mongo, grid_fs_users
+from back import app, grid_fs_users
 from back.models import db_postgres as db
-import gridfs
 import bcrypt
 from datetime import date, datetime, timedelta
 from back.models.user_attendance import user_attendance
