@@ -7,7 +7,7 @@ from back import app, mongo, grid_fs_users
 from back.models import db_postgres as db
 import gridfs
 import bcrypt
-from datetime import date
+from datetime import date, datetime, timedelta
 from back.models.user_attendance import user_attendance
 
 
@@ -101,8 +101,9 @@ def login():
 
         if valid_username and correct_password and face_recognized:
             attendance_date = date.today()
+            expiration_time = datetime.utcnow() + timedelta(minutes=30)
             user_attendance.insert_user_attendance(existing_user.user_id, attendance_date)
-            token = jwt.encode({'user_id': existing_user.user_id}, app.config['SECRET_KEY'])
+            token = jwt.encode({'user_id': existing_user.user_id, 'exp': expiration_time}, app.config['SECRET_KEY'])
             return jsonify({'token': token}), 200
         else:
             return jsonify({'message': 'Face not recognized'}), 400

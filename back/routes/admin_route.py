@@ -9,7 +9,8 @@ import gridfs
 import bcrypt
 from back.models.users import Users
 from back.models.admin_attendance import admin_attendance
-from datetime import date
+from back.models.user_attendance import user_attendance
+from datetime import date, datetime, timedelta
 
 # Create a Blueprint for the routes in this directory
 admin_routes = Blueprint("admin_routes", __name__)
@@ -113,8 +114,9 @@ def login():
 
         if valid_username and correct_password and face_recognized:
             attendance_date = date.today()
+            expiration_time = datetime.utcnow() + timedelta(minutes=30)
             admin_attendance.insert_admin_attendance(existing_admin.admin_id, attendance_date)
-            token = jwt.encode({'user_id': existing_admin.admin_id}, app.config['SECRET_KEY'])
+            token = jwt.encode({'user_id': existing_admin.admin_id, 'exp': expiration_time}, app.config['SECRET_KEY'])
             return jsonify({'token': token}), 200
         else:
             return jsonify({'message': 'Face not recognized'}), 400
@@ -122,30 +124,68 @@ def login():
     return jsonify({'message': 'This is the login page'}), 200
 
 @admin_routes.route('/get_all_user_attendance', methods=['GET'])
+@token_required
 def get_all_user_attendance():
-    pass
+    user_attendance_list = []
+    user_attendance_data = user_attendance.query.all()
+    for attendance in user_attendance_data:
+        user_attendance_list.append({'attendance_id': attendance.attendance_id,
+                                    'user_id': attendance.user_id,
+                                    'attendance_date': attendance.attendance_date})
+    return jsonify({'user_attendance': user_attendance_list}), 200
+
 
 @admin_routes.route('/get_all_admin_attendance', methods=['GET'])
+@token_required
 def get_all_admin_attendance():
-    pass
+    admin_attendance_list = []
+    admin_attendance_data = admin_attendance.query.all()
+    for attendance in admin_attendance_data:
+        admin_attendance_list.append({'attendance_id': attendance.attendance_id,
+                                    'admin_id': attendance.admin_id,
+                                    'attendance_date': attendance.attendance_date})
+    return jsonify({'admin_attendance': admin_attendance_list}), 200
 
 @admin_routes.route('/get_all_users', methods=['GET'])
+@token_required
 def get_all_users():
-    pass
+    user_list = []
+    user_data = Users.query.all()
+    for user in user_data:
+        user_list.append({'user_id': user.user_id, 'username': user.username,
+                        'full_name': user.full_name, 'email': user.email,
+                        'department_id': user.department_id})
+    return jsonify({'users': user_list}), 200
 
 @admin_routes.route('/get_all_admins', methods=['GET'])
+@token_required
 def get_all_admins():
-    pass
+    admin_list = []
+    admin_data = Admins.query.all()
+    for admin in admin_data:
+        admin_list.append({'admin_id': admin.admin_id, 'username': admin.username,
+                        'full_name': admin.full_name, 'email': admin.email,
+                        'department_id': admin.department_id})
+
+    return jsonify({'admins': admin_list}), 200
 
 @admin_routes.route('/get_all_departments', methods=['GET'])
+@token_required
 def get_all_departments():
-    pass
+    department_list = []
+    department_data = Departments.query.all()
+    for department in department_data:
+        department_list.append({'department_id': department.department_id, 'department_name': department.department_name})
+
+    return jsonify({'departments': department_list}), 200
 
 @admin_routes.route('/get_userattendance_by_department', methods=['GET'])
+@token_required
 def get_userattendance_by_department():
-    pass
+    user_attendance_by_department = []
 
 @admin_routes.route('/get_adminattendance_by_department', methods=['GET'])
+@token_required
 def get_adminattendance_by_department():
     pass
 
