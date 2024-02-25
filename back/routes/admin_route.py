@@ -179,15 +179,45 @@ def get_all_departments():
 
     return jsonify({'departments': department_list}), 200
 
-@admin_routes.route('/get_userattendance_by_department', methods=['GET'])
+@admin_routes.route('/get_userattendance_by_department/<department_name>', methods=['GET'])
 @token_required
-def get_userattendance_by_department():
+def get_user_attendance_by_department(department_name):
     user_attendance_by_department = []
+    # Finding department id by name
+    department_id = Departments.query.filter_by(department_name=department_name).first().department_id
+    # Finding all users in that department
+    user_data = Users.query.filter_by(department_id=department_id).all()
+    # Going through all users
+    for user in user_data:
+        # Finding all attendance of each user
+        user_attendance_data = user_attendance.query.filter_by(user_id=user.user_id).all()
+        # Appending each attendance to the final list
+        for attendance in user_attendance_data:
+            user_attendance_by_department.append({'attendance_id': attendance.attendance_id,
+                                                'user_id': attendance.user_id,
+                                                'attendance_date': attendance.attendance_date})
 
-@admin_routes.route('/get_adminattendance_by_department', methods=['GET'])
+    return jsonify({'user_attendance_by_department': user_attendance_by_department}), 200
+
+@admin_routes.route('/get_adminattendance_by_department/<department_name>', methods=['GET'])
 @token_required
-def get_adminattendance_by_department():
-    pass
+def get_admin_attendance_by_department(department_name):
+    admin_attendance_by_department = []
+    # Finding department id by name
+    department_id = Departments.query.filter_by(department_name=department_name).first().department_id
+    # Finding all admins in that department
+    admin_data = Admins.query.filter_by(department_id=department_id).all()
+    # Going through all admins
+    for admin in admin_data:
+        # Finding all attendance of each admin
+        admin_attendance_data = admin_attendance.query.filter_by(admin_id=admin.admin_id).all()
+        # Appending each attendance to the final list
+        for attendance in admin_attendance_data:
+            admin_attendance_by_department.append({'attendance_id': attendance.attendance_id,
+                                                   'admin_id': attendance.admin_id,
+                                                   'attendance_date': attendance.attendance_date})
+
+    return jsonify({'admin_attendance_by_department': admin_attendance_by_department}), 200
 
 
 
