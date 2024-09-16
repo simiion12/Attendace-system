@@ -18,15 +18,12 @@ def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
-        print(request.headers)
         if 'Authorization' in request.headers:
             token = request.headers['Authorization'].split(" ")[1]
-            print(token)
         if not token:
             return jsonify({'message': 'Token is missing!'}), 401
 
         data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-        print(data)
         current_admin = Admins.query.filter_by(admin_id=data['admin_id']).first()
         if not current_admin:
             return jsonify({'message': 'Token is invalid!'}), 401
