@@ -17,7 +17,6 @@ def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
-        print(request.headers)
         if 'Authorization' in request.headers:
             token = request.headers['Authorization'].split(" ")[1]
         if not token:
@@ -60,7 +59,6 @@ def register():
         pwhash = pwhash.decode('utf-8')
 
         user_id = Users.query.order_by(Users.admin_id.desc()).first().admin_id + 1
-        #user_id = 1
         new_user = Users(user_id=user_id, username=username,password=pwhash,
                         full_name=full_name, email=email, department_id=department_id)
 
